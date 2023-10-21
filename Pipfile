@@ -1,0 +1,15 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pyyaml = "6.0.1"
+pyeta = "0.2.1"
+python-telegram-bot = {extras = ["ext"], version = "20.6"}
+
+[dev-packages]
+
+[requires]
+python_version = "3.11"
+python_full_version = "3.11.5"
