@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "eta-watch"
+version = "0.1.0"
+description = ""
+authors = ["Markus Pöschl <Poeschl@users.noreply.github.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pyyaml = "6.0.1"
+pyeta = "0.2.1"
+python-telegram-bot = { version = "20.6", extras = ["ext"] }
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
