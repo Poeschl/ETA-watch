@@ -56,3 +56,15 @@ def save_ref_settings(ref_setting: dict):
   config["reference_settings"] = ref_setting
   with (open(CONFIG_FILE, "w") as configFile):
     configFile.writelines(dump(config))
+
+
+def save_yaml_ref_settings(yaml_ref: str) -> None:
+  config = read_config()
+  config["reference_settings"] = load(yaml_ref, config_loader)
+  with (open(CONFIG_FILE, "w") as configFile):
+    configFile.writelines(dump(config))
+
+
+def load_yaml_ref_settings() -> str:
+  config = read_config()
+  return dump(config["reference_settings"])
