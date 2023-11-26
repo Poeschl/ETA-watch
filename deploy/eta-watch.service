@@ -1,0 +1,11 @@
+[Unit]
+Description=ETA-Watch-Bot
+After=network.target
+
+[Service]
+User=<your-username>
+WorkingDirectory=<path/to/the/project>
+ExecStart=<path/to/your/python/script/folder>poetry run python3 <path/to/the/project>/eta-watch/__init__.py
+
+[Install]
+WantedBy=default.target
