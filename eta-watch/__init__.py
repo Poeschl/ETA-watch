@@ -14,6 +14,7 @@ from telegram.ext._utils.types import FilterDataDict
 from telegram.ext.filters import MessageFilter
 
 from config import read_config, save_ref_settings, load_yaml_ref_settings, save_yaml_ref_settings
+from utils import diff_variable_list
 
 
 class UserFilter(MessageFilter):
@@ -70,21 +71,46 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
   if query.data == CALLBACK.MAIN_CHECK:
     logging.info("Checking against reference")
-    # TBD
-    await query.message.reply_text("Not implemented yet")
-    return STATES.MAIN
+    return await handle_check(update, context)
 
   elif query.data == CALLBACK.MAIN_EDIT:
     logging.info("Edit")
     return await edit_menu(update, context)
 
   elif query.data == CALLBACK.MAIN_RESET:
+    logging.info("Ref reset")
     return await reset_menu(update, context)
+
+
+async def handle_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> STATES:
+  await context.bot.send_message(chat_id=update.effective_message.chat_id,
+                                 text="The diff of the reference and the current configuration is calculating (Will take some time)...")
+  await send_typing_action(update, context)
+
+  current_config = retrieve_eta_settings()
+  config = read_config()
+  ref_config = config["reference_settings"]
+
+  diff_content = []
+
+  for key in ref_config:
+    diff_content.extend(diff_variable_list(ref_config[key], current_config[key]))
+
+  if len(diff_content) > 0:
+    await context.bot.send_message(chat_id=update.effective_message.chat_id, text=f"Found {len(diff_content)} differences\n")
+    for diff in diff_content:
+      await context.bot.send_message(chat_id=update.effective_message.chat_id, disable_notification=True, text=diff.msg_str())
+  else:
+    await context.bot.send_message(chat_id=update.effective_message.chat_id, text="No difference detected")
+
+  return STATES.MAIN
 
 
 async def edit_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> STATES:
   await context.bot.send_message(chat_id=update.effective_message.chat_id,
-                                 text="Current reference will be uploaded as file. Send back your reference with the keys you want to be the new reference.")
+                                 text="Current reference will be uploaded as file. "
+                                      "Send back your reference with the keys you want to be the new reference.\n"
+                                      "Or type /cancel to return to the main menu.")
   await send_upload_action(update, context)
 
   with TemporaryFile(mode="w+", encoding="UTF-8", prefix="ETA-ref-", suffix=".yaml") as temp_file:
@@ -140,13 +166,13 @@ async def handle_reset_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     logging.info("Reset eta reference")
     await query.message.reply_text("Reset reference settings... (Will take some time)")
     await send_typing_action(update, context)
-    save_ref_settings(reset_eta_settings())
+    save_ref_settings(retrieve_eta_settings())
     await query.message.reply_text("Reset reference settings!")
 
   return await main_menu(update, context)
 
 
-def reset_eta_settings() -> dict:
+def retrieve_eta_settings() -> dict:
   nodes = eta.get_nodes()
 
   for section in nodes:
@@ -177,7 +203,7 @@ if __name__ == '__main__':
 
   if config["reference_settings"] == {}:
     logging.info("Retrieve first full reference setting. (May take some time)")
-    save_ref_settings(reset_eta_settings())
+    save_ref_settings(retrieve_eta_settings())
 
   bot_application = ApplicationBuilder().token(config["bot_token"]).build()
 
