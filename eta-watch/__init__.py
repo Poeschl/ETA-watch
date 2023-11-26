@@ -14,7 +14,7 @@ from telegram.ext._utils.types import FilterDataDict
 from telegram.ext.filters import MessageFilter
 
 from config import read_config, save_ref_settings, load_yaml_ref_settings, save_yaml_ref_settings
-from utils import diff_variable_list
+from utils import diff_variable_list, replace_variable_in_list_with_same_variable_in_other_list
 
 
 class UserFilter(MessageFilter):
@@ -38,6 +38,7 @@ class STATES(StrEnum):
 
 class CALLBACK(StrEnum):
   MAIN_CHECK = auto()
+  MAIN_UPDATE = auto()
   MAIN_EDIT = auto()
   MAIN_RESET = auto()
   RESET_YES = auto()
@@ -56,6 +57,7 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> STATE
   """Sends the main option menu"""
   keyboard = [
     [InlineKeyboardButton("Check against reference", callback_data=CALLBACK.MAIN_CHECK)],
+    [InlineKeyboardButton("Update current reference", callback_data=CALLBACK.MAIN_UPDATE)],
     [InlineKeyboardButton("Edit current reference", callback_data=CALLBACK.MAIN_EDIT)],
     [InlineKeyboardButton("Reset current reference", callback_data=CALLBACK.MAIN_RESET)]
   ]
@@ -72,6 +74,10 @@ async def handle_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -
   if query.data == CALLBACK.MAIN_CHECK:
     logging.info("Checking against reference")
     return await handle_check(update, context)
+
+  elif query.data == CALLBACK.MAIN_UPDATE:
+    logging.info("Update current reference")
+    return await handle_update(update, context)
 
   elif query.data == CALLBACK.MAIN_EDIT:
     logging.info("Edit")
@@ -94,7 +100,7 @@ async def handle_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> ST
   diff_content = []
 
   for key in ref_config:
-    diff_content.extend(diff_variable_list(ref_config[key], current_config[key]))
+    diff_content.extend(diff_variable_list(ref_config[key], current_config[key], key))
 
   if len(diff_content) > 0:
     await context.bot.send_message(chat_id=update.effective_message.chat_id, text=f"Found {len(diff_content)} differences\n")
@@ -103,6 +109,25 @@ async def handle_check(update: Update, context: ContextTypes.DEFAULT_TYPE) -> ST
   else:
     await context.bot.send_message(chat_id=update.effective_message.chat_id, text="No difference detected")
 
+  return STATES.MAIN
+
+
+async def handle_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> STATES:
+  await context.bot.send_message(chat_id=update.effective_message.chat_id,
+                                 text="Updating the ref values with the current state (Will take some time)...")
+  await send_typing_action(update, context)
+
+  current_config = retrieve_eta_settings()
+  config = read_config()
+  ref_config = config["reference_settings"]
+
+  changes = 0
+  for key in ref_config:
+    changes += replace_variable_in_list_with_same_variable_in_other_list(ref_config[key], current_config[key])
+
+  save_ref_settings(ref_config)
+  await context.bot.send_message(chat_id=update.effective_message.chat_id,
+                                 text=f"Finished update. ({changes} updates)")
   return STATES.MAIN
 
 
