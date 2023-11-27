@@ -233,19 +233,19 @@ if __name__ == '__main__':
   bot_application = ApplicationBuilder().token(config["bot_token"]).build()
 
   conversation_handler = ConversationHandler(
-    entry_points=[CommandHandler("start", main_menu)],
+    entry_points=[CommandHandler("start", main_menu, filters=userFilter)],
     states={
       STATES.MAIN: [
         CallbackQueryHandler(callback=handle_main_menu, pattern=re.compile("main_.*"))
       ],
       STATES.EDIT: [
-        MessageHandler(filters=filters.Document.ALL, callback=handle_edit_upload)
+        MessageHandler(filters=filters.Document.ALL & userFilter, callback=handle_edit_upload)
       ],
       STATES.RESET: [
         CallbackQueryHandler(callback=handle_reset_menu, pattern=re.compile("reset_.*"))
       ]
     },
-    fallbacks=[CommandHandler(["start", "cancel"], main_menu)]
+    fallbacks=[CommandHandler(["start", "cancel"], main_menu, filters=userFilter)]
   )
 
   bot_application.add_handler(conversation_handler)
